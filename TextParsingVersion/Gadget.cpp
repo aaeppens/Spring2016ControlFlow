@@ -77,7 +77,7 @@ bool Gadget::isEndOfGadget(const string& inputLine) {
 	static vector<string> retCallJmp{ "ret", "call", "jmp" };
 
 	for (string& endType : retCallJmp) {
-		if (inputLine.rfind(endType) != string::npos)
+		if (inputLine.rfind(endType) != string::npos && inputLine.rfind("syscall") == string::npos)
 			return true;
 	}
 	return false;

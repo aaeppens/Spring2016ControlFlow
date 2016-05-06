@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
 
 /*
 This function gets the gadgets that end in ret. 
@@ -12,6 +13,7 @@ It also fills the 'register1 & 2' and 'operation' variables in the
 Operation object to hep us with parsing later.
 */
 vector<Gadget> GetRetGadgets(vector<Gadget> gadgets) {
+
 
 	vector<Gadget> RetGadgets;
 	vector<string> line;
@@ -21,26 +23,146 @@ vector<Gadget> GetRetGadgets(vector<Gadget> gadgets) {
 		if (i.finalDestination == "ret"){
 			for (auto &j : i.operations){
 
-				line = splitstuff(j.instruction);	
+				line = splitstuff(j.instruction);
+				j.operation = line[0];
+				if (j.lineNumber == "18c89"){
+					int lol = 3;
+				} 
+				vectorSize = line.size();
+
+				//while we're here lets fill our operation register object
+
+				if (vectorSize >= 2 && line[1].substr(line[1].length() - 1) == ","){
+					line[1].erase(line[1].size() - 1);
+					
+						line[1].erase(std::remove(line[1].begin(), line[1].end(), '['), line[1].end());
+						line[1].erase(std::remove(line[1].begin(), line[1].end(), ']'), line[1].end());
+					
+				}
+				if (vectorSize >= 2 && (isRegister(line[1]))){
+					j.register1 = line[1];
+					if (vectorSize >= 3){
+						line[2].erase(std::remove(line[2].begin(), line[2].end(), 'a'), line[2].end());
+						line[2].erase(std::remove(line[2].begin(), line[2].end(), 'a'), line[2].end());
+					}
+
+				}
+				if (vectorSize >= 3 && (isRegister(line[2])))
+					j.register2 = line[2];
+				if (line[0] == "add")
+					j.addOperation = line[2];
+
+			}
+			RetGadgets.push_back(i);
+		}
+	}
+
+ 	return RetGadgets;
+}
+//k.register1.find(newTestRegister) != std::string::npos)
+vector<Gadget>  GetSySCallGadgets(vector<Gadget> gadgets) {
+	vector<Gadget> RetGadgets;
+	bool hasSystemCall = false;
+	for (auto &i : gadgets){
+		hasSystemCall = false;
+		if (i.finalDestination == "syscall"){
+			int zkdfgh = 0;
+		}
+		for (auto &j : i.operations){
+			
+			if (j.instruction.find("syscall") != std::string::npos)
+				hasSystemCall = true;
+		}	
+		if (hasSystemCall && i.operations.size() < 5)
+			RetGadgets.push_back(i);
+	}
+
+	return RetGadgets;
+}
+
+vector<Gadget> GetJmpGadgets(vector<Gadget> gadgets) {
+
+	vector<Gadget> JmpGadgets;
+	vector<string> line;
+	vector<string> line2;
+	
+	int vectorSize = 0;
+	for (auto &i : gadgets){ //get the gadgets that end with jmp
+
+		//if (i.type == "rlp")
+			
+
+		line2 = splitstuff(i.finalDestination);
+		if (line2.size() >= 2 && line2[0] == "jmp" && isRegister(line2[1])){
+			for (auto &j : i.operations){
+
+				line = splitstuff(j.instruction);
+				j.operation = line[0];
+				vectorSize = line.size();
+
+				//while we're here lets fill our operation register object
+				if (vectorSize >= 2 && line[1].substr(line[1].length() - 1) == ","){
+					line[1].erase(line[1].size() - 1);
+
+					line[1].erase(std::remove(line[1].begin(), line[1].end(), '['), line[1].end());
+					line[1].erase(std::remove(line[1].begin(), line[1].end(), ']'), line[1].end());
+
+				}
+				if (vectorSize >= 2 && (isRegister(line[1]))){
+					j.register1 = line[1];
+					if (vectorSize >= 3){
+						line[2].erase(std::remove(line[2].begin(), line[2].end(), 'a'), line[2].end());
+						line[2].erase(std::remove(line[2].begin(), line[2].end(), 'a'), line[2].end());
+					}
+
+				}
+				if (vectorSize >= 3 && (isRegister(line[2])))
+					j.register2 = line[2];
+				if (line[0] == "add")
+					j.addOperation = line[2];
+
+			}
+			JmpGadgets.push_back(i);
+		}
+	}
+
+	return JmpGadgets;
+}
+
+
+vector<Gadget> GetCallGadgets(vector<Gadget> gadgets) {
+
+	vector<Gadget> JmpGadgets;
+	vector<string> line;
+	vector<string> line2;
+
+	int vectorSize = 0;
+	for (auto &i : gadgets){ //get the gadgets that end with jmp			
+
+		line2 = splitstuff(i.finalDestination);
+		if (line2.size() >= 2 && line2[0] == "call" && isRegister(line2[1]) && line2.size() < 8){
+			for (auto &j : i.operations){
+
+				line = splitstuff(j.instruction);
 				j.operation = line[0];
 				vectorSize = line.size();
 
 				//while we're here lets fill our operation register object
 				if (vectorSize >= 2 && line[1].substr(line[1].length() - 1) == ",")
-					line[1].erase(line[1].size() - 1);				
-				if (vectorSize >= 2 && (isRegister(line[1])))			
+					line[1].erase(line[1].size() - 1);
+				if (vectorSize >= 2 && (isRegister(line[1])))
 					j.register1 = line[1];
 				if (vectorSize >= 3 && (isRegister(line[2])))
 					j.register2 = line[2];
 				if (line[0] == "add")
-					j.addOperation = line[2];			
-							
-			}	
-			RetGadgets.push_back(i);
+					j.addOperation = line[2];
+
+			}
+			JmpGadgets.push_back(i);
 		}
 	}
 
-	return RetGadgets; 
+	return JmpGadgets;
 }
 
 /*
@@ -68,9 +190,13 @@ vector<Gadget> LoadOperations(vector<Gadget> gadgets, string reg) {
 		hasGadgetPop = false;
 		hasPop = false;
 		loadedGadgets.clear();
+
 		for (auto &j : i.operations){ 
 
+
 			if (j.operation == "pop"){
+				
+
 				hasPop = true;
 				loadedGadgets.push_back(j.register1);
 
@@ -107,23 +233,226 @@ output:
 -vector<gadgets> : will be a vector of gadgets with an add operation for the given register
 
 */
-vector<Gadget> GetAddGadgets(vector<Gadget> gadgets, string reg){
+vector<Gadget> GetAddGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> addGadgets;
+	bool hasAdd = false;
+
+	
+
+	for (auto &i : gadgets){
+
+		hasAdd = false;
+		for (auto &j : i.operations){
+
+			if ((j.operation == "add" && (j.register2 == reg1 ))){
+
+				hasAdd = true;
+				if (isRegister(j.register1) && isRegister(j.register2))
+					i.addRegToReg = true; 				
+
+			}
+		}
+		if (hasAdd && i.operations.size() < 15)
+			addGadgets.push_back(i);
+	}
+
+	return addGadgets;
+}
+vector<Gadget> GetCmpGadgets(vector<Gadget> gadgets, string reg1){
+	vector<Gadget> cmpGadgets;
+	bool hasAdd = false;
+
+
+
+	for (auto &i : gadgets){
+
+		hasAdd = false;
+		for (auto &j : i.operations){
+
+			if ((j.operation == "cmp" && (j.register2 == reg1) && (isRegister(j.register1) ))){
+
+				hasAdd = true;
+				if (isRegister(j.register1) && isRegister(j.register2))
+					i.addRegToReg = true;
+
+			}
+		}
+		if (hasAdd && i.operations.size() < 15)
+			cmpGadgets.push_back(i);
+	}
+
+	return cmpGadgets;
+}
+vector<Gadget> GetSubGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> addGadgets;
+	bool hasAdd = false;
+
+
+	for (auto &i : gadgets){
+		hasAdd = false;
+
+
+		for (auto &j : i.operations){
+
+			if ((j.operation == "sub" && j.register2 == reg1) )
+				hasAdd = true;
+		}
+		if (hasAdd && i.operations.size() < 25)
+			addGadgets.push_back(i);
+	}
+
+	return addGadgets;
+}
+vector<Gadget> GetMulGadgets(vector<Gadget> gadgets, string reg1, string reg2){
 	vector<Gadget> addGadgets;
 	bool hasAdd = false;
 
 	for (auto &i : gadgets){
 		hasAdd = false;
 		for (auto &j : i.operations){
-			if (j.operation == "add" && j.register1 == reg && ((j.addOperation.find("0") == 0) || isRegister(j.addOperation)))
+			if ((j.operation == "mul" || j.operation == "imul") && j.register2 == reg1)
 				hasAdd = true;
 		}
-		if (hasAdd && i.operations.size() < 20)
+		if (hasAdd && i.operations.size() < 25)
 			addGadgets.push_back(i);
 	}
 
 	return addGadgets;
 }
 
+vector<Gadget> GetRotateGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> rotateGadgets;
+	bool hasRotate = false;
+
+	for (auto &i : gadgets){
+		hasRotate = false;
+		for (auto &j : i.operations){
+			if ((j.operation == "ror" || j.operation == "rol" || j.operation == "rcr" || j.operation == "rcl") && j.register2 == reg1)
+				hasRotate = true;
+		}
+		if (hasRotate && i.operations.size() < 15)
+			rotateGadgets.push_back(i);
+	}
+
+	return rotateGadgets;
+}
+vector<Gadget> GetShiftGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> shiftGadgets;
+	bool hasShift = false;
+
+	for (auto &i : gadgets){
+		hasShift = false;
+		for (auto &j : i.operations){
+			if ((j.operation == "shr" || j.operation == "shl" || j.operation == "sar" || j.operation == "sal") && j.register2 == reg1)
+				hasShift = true;
+		}
+		if (hasShift && i.operations.size() < 15)
+			shiftGadgets.push_back(i);
+	}
+
+	return shiftGadgets;
+}
+
+vector<Gadget> GetDivGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> addGadgets;
+	bool hasAdd = false;
+
+	for (auto &i : gadgets){
+		hasAdd = false;
+		for (auto &j : i.operations){
+			if ((j.operation == "div" || j.operation == "idiv") && j.register2 == reg1 )
+				hasAdd = true;
+		}
+		if (hasAdd && i.operations.size() < 25)
+			addGadgets.push_back(i);
+	}
+
+	return addGadgets;
+}
+vector<Gadget> GetNegGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> addGadgets;
+	bool hasAdd = false;
+
+	for (auto &i : gadgets){
+		hasAdd = false;
+		for (auto &j : i.operations){
+			if (j.operation == "neg"  && j.register1 == reg1 )
+				hasAdd = true;
+		}
+		if (hasAdd && i.operations.size() < 25)
+			addGadgets.push_back(i);
+	}
+
+	return addGadgets;
+}
+
+
+
+vector<Gadget> GetXorGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> addGadgets;
+	bool hasAdd = false;
+
+	for (auto &i : gadgets){
+		hasAdd = false;
+		for (auto &j : i.operations){
+			if ((j.operation == "xor")  && j.register2 == reg1)
+				hasAdd = true;
+		}
+		if (hasAdd && i.operations.size() < 6)
+			addGadgets.push_back(i);
+	}
+
+	return addGadgets;
+}
+
+vector<Gadget> GetOrGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> addGadgets;
+	bool hasAdd = false;
+
+	for (auto &i : gadgets){
+		hasAdd = false;
+		for (auto &j : i.operations){
+			if ((j.operation == "or") && j.register2 == reg1)
+				hasAdd = true;
+		}
+		if (hasAdd )
+			addGadgets.push_back(i);
+	}
+
+	return addGadgets;
+}
+vector<Gadget> GetAndGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> addGadgets;
+	bool hasAdd = false;
+
+	for (auto &i : gadgets){
+		hasAdd = false;
+		for (auto &j : i.operations){
+			if ((j.operation == "and") && j.register2 == reg1)
+				hasAdd = true;
+		}
+		if (hasAdd)
+			addGadgets.push_back(i);
+	}
+
+	return addGadgets;
+}
+vector<Gadget> GetNotGadgets(vector<Gadget> gadgets, string reg1, string reg2){
+	vector<Gadget> addGadgets;
+	bool hasAdd = false;
+
+	for (auto &i : gadgets){
+		hasAdd = false;
+		for (auto &j : i.operations){
+			if ((j.operation == "not") && j.register1 == reg1)
+				hasAdd = true;
+		}
+		if (hasAdd && i.operations.size() < 8)
+			addGadgets.push_back(i);
+	}
+
+	return addGadgets;
+}
 /*
 This function gets the gadgets have storage operations
 
@@ -135,14 +464,14 @@ output:
 -vector<gadgets> : will be a vector of gadgets with an storage operation for the given register
 
 */
-vector<Gadget> GetStorageGadgets(vector<Gadget> gadgets, string reg){
+vector<Gadget> GetStorageGadgets(vector<Gadget> gadgets, string reg1, string reg2){
 	vector<Gadget> storageGadgets;
 	bool hasStorage = false;
 
 	for (auto &i : gadgets){
 		hasStorage = false;
 		for (auto &j : i.operations){
-			if (j.operation == "mov" && j.register1 == reg && isRegister(j.register2))
+			if (j.operation == "mov" && j.register1 == reg1 && isRegister(j.register2))
 				hasStorage = true;
 		}
 		if (hasStorage && i.operations.size() < 5 )
@@ -168,18 +497,115 @@ output:
 -vector<gadgets> : will be a vector of gadgets with generic gadget side effects removed
 
 */
-vector<Gadget> RemoveMovSideEffect(vector<Gadget> gadgets, string reg) {
+
+//(j.operation == "mov" &&
+	//(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+	//(j.operation == "movzx" &&
+	//(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+
+
+vector<Gadget> RemoveMovSideEffect(vector<Gadget> gadgets, string reg1, string reg2, string addOrSub) {
 	vector<Gadget> newGadgets;
+
+	vector<string> movedRegister;
 	
 	bool goodGadget = true;
+	bool alreadyAdded = false;
+	bool afterMov = false;
+
 	for (auto &i : gadgets){
 		goodGadget = true;
+		alreadyAdded = false;
+		Gadget backup = i;
+		string manipulateRegister = "";
 		for (auto &j : i.operations){
-			if (j.operation == "mov" && j.register2.find(reg) != std::string::npos || (j.operation == "lea" &&  j.register1.find(reg) != std::string::npos) || (j.operation == "pop" && j.register1.find(reg) != std::string::npos) || (j.operation == "xor" && j.register1.find(reg) != std::string::npos))//something wrote over our register before storage
-				goodGadget = false;
+
+			if (!goodGadget && movedRegister.size() > 0) //our test gadget failed, but we still have a stored mov operation	
+			{
+				while (movedRegister.size() > 0){
+					string newTestRegister = movedRegister[0];
+					afterMov = false;
+					for (auto &k : backup.operations){//start back over at the beginning
+
+						if (k.operation == "mov" && k.register1 == newTestRegister) //looking to see where the mov happened
+							afterMov = true;
+
+						if (afterMov){ //only test ater a mov happened do we check for failure
+							if ((k.operation == "lea" &&
+								(k.register1.find(newTestRegister) != std::string::npos)) ||
+								(k.operation == addOrSub &&
+								((k.register1.find(newTestRegister) != std::string::npos))) ||
+								(k.operation == "pop" &&
+								(k.register1.find(newTestRegister) != std::string::npos)) ||
+								(k.operation == "xor" &&
+								(k.register1.find(newTestRegister) != std::string::npos)))
+								goodGadget = false;
+						}
+					}
+					if (goodGadget){
+						newGadgets.push_back(backup);
+						goto end;
+					}
+					movedRegister.pop_back();
+
+					}					
+				
+					continue;
+			}
+
+			if (j.lineNumber == "48272f")
+				int aosiffh = 0;
+			
+			if (j.operation == "mov"){
+				if (j.register2 == reg1 && isRegister(j.register1))
+					movedRegister.push_back(j.register1);
+			}
+
+			if (j.operation == "add" && addOrSub == "sub" && j.register2 == reg1){
+				manipulateRegister = j.register1;
+				alreadyAdded = true;
+			}
+			if (j.operation == "sub" && addOrSub == "add" && j.register2 == reg1){
+				alreadyAdded = true;
+			}
+
+
+			if (!alreadyAdded){
+				if ((j.operation == "lea" &&
+					(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+					(j.operation == addOrSub &&
+					((j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos))) ||
+					(j.operation == "pop" &&
+					(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+					(j.operation == "and" &&
+					(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+					(j.operation == "xor" &&
+					(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)))//something wrote over our register before storage
+					goodGadget = false;
+			}
+			else{
+				//if ((j.operation == "lea" &&
+				//	(j.register1.find(manipulateRegister) != std::string::npos)) ||
+
+				//	(j.operation == "mov" &&
+				//	(j.register1.find(manipulateRegister) != std::string::npos)) ||
+				//	(j.operation == "and" &&
+				//	(j.register1.find(manipulateRegister) != std::string::npos)) ||
+
+				//	(j.operation == addOrSub &&
+				//	((j.register1.find(manipulateRegister) != std::string::npos))) ||
+				//	(j.operation == "pop" &&
+				//	(j.register1.find(manipulateRegister) != std::string::npos)) ||
+				//	(j.operation == "xor" &&
+				//	(j.register1.find(manipulateRegister) != std::string::npos)))//something wrote over our register before storage
+				//	goodGadget = false;
+			
+			}
+
 		}
 		if (goodGadget)
 			newGadgets.push_back(i);
+	end:;
 	}
 	return newGadgets;
 }
@@ -198,16 +624,31 @@ output:
 -vector<gadgets> : will be a vector of gadgets with storage gadget side effects removed
 
 */
-vector<Gadget> RemoveMovSideEffectStorage(vector<Gadget> gadgets, string reg) {
-	vector<Gadget> newGadgets;//lea
+vector<Gadget> RemoveMovSideEffectStorage(vector<Gadget> gadgets, string reg1, string reg2, string addOrSub) {
+	vector<Gadget> newGadgets;
 
 	bool goodGadget = true;
 	for (auto &i : gadgets){
 		goodGadget = true;
 		for (auto &j : i.operations){
-			if (j.operation == "mov" && j.register1.find(reg) != std::string::npos)
+			if (j.operation == "mov" && j.register1.find(reg1) != std::string::npos)
 				continue; //our storage has been done, side effects dont matter anymore
-			if (j.operation == "mov" && j.register2.find(reg) != std::string::npos || (j.operation == "lea" &&  j.register1.find(reg) != std::string::npos) || (j.operation == "pop" && j.register1.find(reg) != std::string::npos) || (j.operation == "xor" && j.register1.find(reg) != std::string::npos)) //something wrote over our register before storage
+			if ((j.operation == "mov" &&
+				(j.register2.find(reg1) != std::string::npos || j.register2.find(reg2) != std::string::npos)) ||
+				(j.operation == "mov" &&
+				(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+				(j.operation == "movzx" &&
+				(j.register2.find(reg1) != std::string::npos || j.register2.find(reg2) != std::string::npos)) ||
+				(j.operation == "movzx" &&
+				(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+				(j.operation == "lea" &&
+				(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+				(j.operation == addOrSub &&
+				(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+				(j.operation == "pop" &&
+				(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)) ||
+				(j.operation == "xor" &&
+				(j.register1.find(reg1) != std::string::npos || j.register1.find(reg2) != std::string::npos)))//something wrote over our register before storage
 				goodGadget = false;
 		}
 		if (goodGadget)
@@ -299,20 +740,40 @@ bool isRegister(string reg){
 		return true; 
 	return false; 
 }
+void PrintGadgets(vector<Gadget> gadgets, string fName){
+	ofstream myfile;
+	myfile.open(fName);
+	int vectorSize = 0;
+
+	myfile << "~~~~~~~~~~~~~~~~~~~~\n\n";
+	for (auto &reg : gadgets){
+		vectorSize = reg.operations.size();
+
+		myfile << setw(10) << reg.typeLineNumber << "\t\t\t" << reg.typeOpcode << "\t\t\t\t" << reg.type << "\n";
+		for (auto &i : reg.operations){
+			
+			myfile << setw(10) << i.lineNumber << setw(25) << i.opcode << setw(40) << i.instruction << "\n";
+		}
+		myfile << setw(10) << reg.finalDestinationLineNumber << setw(25) << reg.fianlDestinationOpcode << setw(40) << reg.finalDestination << "\n\n\n";
+	}
+
+	myfile.close();
+}
 
 //prints all results
-void printFinalResults(vector<vector<Gadget>> load, vector<vector<Gadget>> add, vector<vector<Gadget>> store){
+void printFinalResults(vector<vector<Gadget>> load, vector<vector<Gadget>> add, vector<vector<Gadget>> store, string filename, string typeOfOp, bool is64){
 	ofstream myfile;
-	myfile.open("example.txt");
+	myfile.open(filename);
 	int i = 0;
-	myfile << "~~~~~~~   Load Gadget Section   ~~~~~~~~~  \n\n";
+	myfile << "~~~~~~~   " << "Load Gadget Section   ~~~~~~~~~\n\n";
 	for (auto &reg : load){
-
-		myfile << "Results for register: " + AllRegisters[i] + ": \n ";
+	
+		myfile << "Results for register: " << (typeOfOp.find("8 Bit") != std::string::npos ? _8Registers[i] :
+				(is64 == true ? _64Registers[i] : _32Registers[i])) << ": \n ";
 		myfile << "Load Gadgets Found:  \n\n";
 
 		for (auto &i : reg){
-			myfile << setw(10) << i.typeLineNumber << "\t\t" << i.typeOpcode << "\t\t" << i.type << "\n";
+			myfile  << setw(10) << i.typeLineNumber << "\t\t" << i.typeOpcode << "\t\t" << i.type << "\n";
 			for (auto &j : i.operations){
 				myfile << setw(10) << j.lineNumber << setw(25) << j.opcode << setw(40) << j.instruction << "\n";
 			}
@@ -324,16 +785,20 @@ void printFinalResults(vector<vector<Gadget>> load, vector<vector<Gadget>> add, 
 	}
 	i = 0;
 
-	myfile << "~~~~~~~   Add Gadget Section   ~~~~~~~~~  \n\n";
+	myfile << "~~~~~~~   " << typeOfOp << " Gadget Section   ~~~~~~~~~  \n\n";
 	for (auto &reg : add){
 
-		myfile << "Results for register: " + AllRegisters[i] + ": \n ";
-		myfile << "Add Found:  \n\n";
+		myfile << "Results for register: " << (typeOfOp.find("8 Bit") != std::string::npos ? _8Registers[i] :
+			(is64 == true ? _64Registers[i] : _32Registers[i])) << ": \n ";
+		myfile <<  typeOfOp << " Found:  \n\n";	
 
 		for (auto &i : reg){
-			myfile << setw(10) << i.typeLineNumber << "\t\t" << i.typeOpcode << "\t\t" << i.type << "\n";
+			if (i.addRegToReg == true)
+				myfile << "*** Is a [Reg] add [Reg] *** \n\n";
+
+			myfile << typeOfOp << ":Operation " << setw(10) << i.typeLineNumber << "\t\t" << i.typeOpcode << "\t\t" << i.type << "\n";
 			for (auto &j : i.operations){
-				myfile << setw(10) << j.lineNumber << setw(25) << j.opcode << setw(40) << j.instruction << "\n";
+				myfile <<  setw(10) << j.lineNumber << setw(25) << j.opcode << setw(40) << j.instruction << "\n";
 			}
 
 			myfile << setw(10) << i.finalDestinationLineNumber << setw(25) << i.fianlDestinationOpcode << setw(40) << i.finalDestination << "\n\n\n";
@@ -345,13 +810,14 @@ void printFinalResults(vector<vector<Gadget>> load, vector<vector<Gadget>> add, 
 	myfile << "~~~~~~~   Storage Gadget Section   ~~~~~~~~~  \n\n";
 	for (auto &reg : store){
 
-		myfile << "Results for register: " + AllRegisters[i] + ": \n ";
-		myfile << "Load Gadgets Found:  \n\n";
+		myfile << "Results for register: " << (typeOfOp.find("8 Bit") != std::string::npos ? _8Registers[i] :
+			(is64 == true ? _64Registers[i] : _32Registers[i])) << ": \n ";
+		myfile << "Storage Gadgets Found:  \n\n";
 
 		for (auto &i : reg){
-			myfile << setw(10) << i.typeLineNumber << "\t\t" << i.typeOpcode << "\t\t" << i.type << "\n";
+			myfile  << setw(10) << i.typeLineNumber << "\t\t\t\t" << i.typeOpcode << "\t\t" << i.type << "\n";
 			for (auto &j : i.operations){
-				myfile << setw(10) << j.lineNumber << setw(25) << j.opcode << setw(40) << j.instruction << "\n";
+				myfile  << setw(10) << j.lineNumber << setw(25) << j.opcode << setw(40) << j.instruction << "\n";
 			}
 
 			myfile << setw(10) << i.finalDestinationLineNumber << setw(25) << i.fianlDestinationOpcode << setw(40) << i.finalDestination << "\n\n\n";
@@ -363,44 +829,3 @@ void printFinalResults(vector<vector<Gadget>> load, vector<vector<Gadget>> add, 
 	myfile.close();
 }
 
-//prints single result
-//currently not in use
-void printResults(vector<Gadget> load, vector<Gadget> addition, vector<Gadget> store, string reg){
-	ofstream myfile;
-	myfile.open("example.txt");
-	myfile << "Results for register: " + reg + ": \n ";
-	myfile << "Load Gadgets Found:  \n\n";
-
-	for (auto &i : load){
-		myfile << setw(10) << i.typeLineNumber << "\t\t" << i.typeOpcode << "\t\t" << i.type << "\n";
-		for (auto &j : i.operations){
-			myfile << setw(10) << j.lineNumber << setw(25) << j.opcode << setw(40) << j.instruction << "\n";
-		}
-
-		myfile << setw(10) << i.finalDestinationLineNumber << setw(25) << i.fianlDestinationOpcode << setw(40) << i.finalDestination << "\n\n\n";
-	}
-
-	myfile << "Addition Gadgets Found: \n";
-	for (auto &i : addition){
-		myfile << setw(10) << i.typeLineNumber << "\t\t" << i.typeOpcode << "\t\t" << i.type << "\n";
-		for (auto &j : i.operations){
-			myfile << setw(10) << j.lineNumber << setw(25) << j.opcode << setw(40) << j.instruction << "\n";
-		}
-
-		myfile << setw(10) << i.finalDestinationLineNumber << setw(25) << i.fianlDestinationOpcode << setw(40) << i.finalDestination << "\n\n\n";
-	}
-
-	myfile << "Storage Gadgets Found: \n";
-	for (auto &i : store){
-		myfile << setw(10) << i.typeLineNumber << "\t\t" << i.typeOpcode << "\t\t" << i.type << "\n";
-		for (auto &j : i.operations){
-			myfile << setw(10) << j.lineNumber << setw(25) << j.opcode << setw(40) << j.instruction << "\n";
-		}
-
-		myfile << setw(10) << i.finalDestinationLineNumber << setw(25) << i.fianlDestinationOpcode << setw(40) << i.finalDestination << "\n\n\n";
-	}
-	
-
-	myfile.close();
-
-}

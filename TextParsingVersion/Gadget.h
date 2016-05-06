@@ -19,7 +19,9 @@ public:
 	string operation;
 	string register1;
 	string register2;
+
 	string addOperation;
+	
 
 private:
 	void SetOperation(const string& inputLine);
@@ -43,13 +45,22 @@ public:
 	string fianlDestinationOpcode;
 	string finalDestinationLineNumber;
 	string popLocation;
-
+	bool addRegToReg = false;
 	vector<Operation> operations;
+	string hasMov = "no";
 private:
 
 };
 
-static vector<string> AllRegisters{ "rax", "eax", "ax", "al","rbx" };
+//static vector<string> AllRegisters{ "rax", "eax", "ax", "al","rbx" };
+
+const string _64Registers[] = { "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15" };
+
+
+const string _32Registers[] = { "eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "r8d", "r9d", "r10d", "r11d", "r12d", "r13d", "r14d", "r15d" };
+
+const string _8Registers[] = { "al", "bl", "cl", "dl", "sil", "dil", "bpl", "spl", "r8b", "r9b", "r10b", "r11b", "r12b", "r13b", "r14b", "r15b" };
+
 
 //reg == "rax" ||
 //reg == "eax" ||
